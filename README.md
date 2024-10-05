@@ -33,6 +33,7 @@ If errors in communications or long wire use twisted pair cable like LIYY (TP) 2
 
 Cable pinout, telephone cable RJ10:  
 ![atomtail](https://github.com/user-attachments/assets/3376d275-32a4-4ce1-be8a-635d06be098f)  
+![rj10pins](https://github.com/user-attachments/assets/e0e3bc6f-94d8-4074-9381-20c301f4cd1e)  
 (Colors may vary, so measuring voltage is advised)  
 |PIN|DESIGNATION|COLOR|
 |--|--|--|

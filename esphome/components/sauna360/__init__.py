@@ -1,9 +1,16 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import uart
-from esphome.const import CONF_ID
+from esphome.const import CONF_ID, CONF_TEMPERATURE
 
 DEPENDENCIES = ["uart"]
+
+
+AUTO_LOAD = ["sensor"]
+MULTI_CONF = True
+
+CONF_ACTUAL_TEMPERATURE_STATE = "actual_temp"
+CONF_SAUNA360_ID = "sauna360_alarm_panel_id"
 
 sauna360_uart_component_ns = cg.esphome_ns.namespace("sauna360_uart_component")
 Sauna360UARTComponent = sauna360_uart_component_ns.class_(

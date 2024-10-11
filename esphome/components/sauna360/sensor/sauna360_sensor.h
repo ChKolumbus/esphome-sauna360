@@ -8,10 +8,10 @@
 namespace esphome {
 namespace sauna360_uart_component {
 
-class Sauna360Sensor : public Sensor {
+class Sauna360Sensor : public Component {
  public:
-  void update_actualTemp(int value) override;
-  void update_setPointTemp(int value) override;
+  void update_actualTemp(int value);
+  void update_setPointTemp(int value);
 
   void dump_config() override;
   void setup() override;

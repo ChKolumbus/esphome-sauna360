@@ -2,7 +2,7 @@ substitutions:
   device_name: helo
 
 external_components:
-  - source: my_components
+  - source: esphome/components
 
 esphome:
   name: ${device_name}

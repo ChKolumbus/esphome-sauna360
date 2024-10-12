@@ -1,5 +1,23 @@
-# secret
+# ESPhome related
 secrets.yaml
+.DS_Store
+/.esphome/
+**/.pioenvs/
+**/.piolibdeps/
+**/lib/
+**/src/
+**/platformio.ini
+/secrets.yaml
+.vscode/
+venv/
+builds/
+*.py[cod]
+/prs/
+*.sfd
+*.birdfont
+/scratchbox/
+/dev/
+.git.bak
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

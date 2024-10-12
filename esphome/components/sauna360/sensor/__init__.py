@@ -27,11 +27,10 @@ CONFIG_SCHEMA = sensor.SENSOR_SCHEMA.extend(
 
 
 def to_code(config):
-    parent = yield cg.get_variable(config[CONF_SAUNA360_ID])
+    paren = yield cg.get_variable(config[CONF_SAUNA360_ID])
     var = cg.new_Pvariable(config[CONF_ID])
 
     yield sensor.register_sensor(var, config)
 
     if config[CONF_TYPE] == "actual_temp":
-        cg.add(parent.register_actual_temp(var))
-
+        cg.add(paren.register_actual_temp(var))

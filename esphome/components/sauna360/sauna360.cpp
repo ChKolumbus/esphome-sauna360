@@ -111,7 +111,7 @@ void Sauna360UARTComponent::handle_packet_(std::vector<uint8_t> packet) {
     this->actual_temp_sensor_->publish_state(actualTemp);
     int setPointTemp = ((data >> 11) & 0x00007FF) / 9.0;
     ESP_LOGCONFIG(TAG, "Set temp: %d" ,setPointTemp);
-    update_setPointTemp(setPointTemp);
+    //update_setPointTemp(setPointTemp);
   }
 
   else if (code == 0x3400){

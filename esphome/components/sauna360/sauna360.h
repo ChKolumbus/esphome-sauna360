@@ -12,14 +12,14 @@ class Sauna360UARTComponent : public uart::UARTDevice, public Component {
     void setup() override;
     void loop() override;
     void dump_config() override;
-    void register_actual_temp_state(sensor::Sensor *actual_temp_sensor_) { this->actual_temp_sensor_ = actual_temp_sensor_; }
+    void set_temperature_sensor(sensor::Sensor *temperature_sensor) { this->temperature_sensor_ = temperature_sensor; }
 
   protected:
     void handle_char_(uint8_t c);
     void handle_frame_(std::vector<uint8_t> frame);
     void handle_packet_(std::vector<uint8_t> packet);
     std::vector<uint8_t> rx_message_;
-    sensor::Sensor *actual_temp_sensor_;
+    sensor::Sensor *temperature_sensor_{nullptr};
 };
 
 

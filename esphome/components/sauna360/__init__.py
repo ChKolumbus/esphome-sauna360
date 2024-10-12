@@ -10,7 +10,7 @@ AUTO_LOAD = ["sensor"]
 MULTI_CONF = True
 
 CONF_ACTUAL_TEMPERATURE_STATE = "actual_temp"
-CONF_SAUNA360_ID = "sauna360_alarm_panel_id"
+CONF_SAUNA360 = "sauna360"
 
 sauna360_uart_component_ns = cg.esphome_ns.namespace("sauna360_uart_component")
 Sauna360UARTComponent = sauna360_uart_component_ns.class_(

@@ -108,7 +108,7 @@ void Sauna360UARTComponent::handle_packet_(std::vector<uint8_t> packet) {
     // Found temperature data point. Split into set point and actual value
     int actualTemp = (data & 0x00007FF) / 9.0;
     ESP_LOGCONFIG(TAG, "Actual temp: %d" ,actualTemp);
-    this->actual_temp_sensor_->publish_state(actualTemp);
+    this->temperature_sensor_->publish_state(actualTemp);
     int setPointTemp = ((data >> 11) & 0x00007FF) / 9.0;
     ESP_LOGCONFIG(TAG, "Set temp: %d" ,setPointTemp);
     //update_setPointTemp(setPointTemp);

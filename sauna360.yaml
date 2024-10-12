@@ -56,3 +56,6 @@ sensor:
 - platform: wifi_signal
   name: "${device_name} WiFi Signal"
   update_interval: 60s
+- platform: sauna360
+  temperature:
+    name: "Current Temperature"

@@ -1,36 +1,41 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import sensor
-from esphome.const import CONF_ID, CONF_TYPE
-from .. import Sauna360UARTComponent, CONF_SAUNA360_ID
+from esphome.const import (
+    CONF_HUMIDITY,
+    CONF_ID,
+    CONF_TEMPERATURE,
+    DEVICE_CLASS_HUMIDITY,
+    DEVICE_CLASS_TEMPERATURE,
+    STATE_CLASS_MEASUREMENT,
+    UNIT_CELSIUS,
+    UNIT_PERCENT,
+)
 
-DEPENDENCIES = ["sauna360"]
+CONF_SAUNA360 = "sauna360"
 
-sensor_ns = cg.esphome_ns.namespace("sensor")
-Sensor = sensor_ns.class_("Sensor", cg.EntityBase)
+sauna360_ns = cg.esphome_ns.namespace("sauna360_uart_component")
+SAUNA360SENSOR = sauna360_ns.class_("sensor.sauna360", cg.Component)
 
-TYPES = "actual_temp"
-
-SAUNA360_SENSOR_SCHEMA = sensor.SENSOR_SCHEMA.extend(
-    {
-        cv.GenerateID(CONF_SAUNA360_ID): cv.use_id(),
-    }
-).extend(cv.COMPONENT_SCHEMA)
-
-CONFIG_SCHEMA = sensor.SENSOR_SCHEMA.extend(
-    {
-        cv.GenerateID(): cv.declare_id(Sensor),
-        cv.GenerateID(CONF_SAUNA360_ID): cv.use_id(Sauna360UARTComponent),
-        cv.Required(CONF_TYPE): cv.one_of(*TYPES, lower=True),
-    }
-).extend(cv.COMPONENT_SCHEMA)
+CONFIG_SCHEMA = (
+    cv.Schema(
+        {
+            cv.GenerateID(): cv.declare_id(CONF_ID),
+            cv.Optional(CONF_TEMPERATURE): sensor.sensor_schema(
+                unit_of_measurement=UNIT_CELSIUS,
+                accuracy_decimals=1,
+                device_class=DEVICE_CLASS_TEMPERATURE,
+                state_class=STATE_CLASS_MEASUREMENT,
+            ),
+        }
+    )
+)
 
 
-def to_code(config):
-    paren = yield cg.get_variable(config[CONF_SAUNA360_ID])
+async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
+    await cg.register_component(var, config)
 
-    yield sensor.register_sensor(var, config)
-
-    if config[CONF_TYPE] == "actual_temp":
-        cg.add(paren.register_actual_temp(var))
+    if temperature_config := config.get(CONF_TEMPERATURE):
+        sens = await sensor.new_sensor(temperature_config)
+        cg.add(var.set_temperature_sensor(sens))

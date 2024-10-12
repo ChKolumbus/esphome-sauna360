@@ -8,8 +8,8 @@
   "address": "192.168.1.174",
   "web_port": null,
   "esp_platform": "ESP32",
-  "build_path": ".esphome/build/helo",
-  "firmware_bin_path": ".esphome/build/helo/.pioenvs/helo/firmware.bin",
+  "build_path": "my_components/esphome-sauna360/.esphome/build/helo",
+  "firmware_bin_path": "my_components/esphome-sauna360/.esphome/build/helo/.pioenvs/helo/firmware.bin",
   "loaded_integrations": [
     "api",
     "esp32",

@@ -12,31 +12,36 @@ from esphome.const import (
     UNIT_PERCENT,
 )
 
-CONF_SAUNA360 = "sauna360"
-
-sauna360_ns = cg.esphome_ns.namespace("sauna360_uart_component")
-SAUNA360SENSOR = sauna360_ns.class_("sensor.sauna360", cg.Component)
-
-CONFIG_SCHEMA = (
-    cv.Schema(
-        {
-            cv.GenerateID(): cv.declare_id(CONF_ID),
-            cv.Optional(CONF_TEMPERATURE): sensor.sensor_schema(
-                unit_of_measurement=UNIT_CELSIUS,
-                accuracy_decimals=1,
-                device_class=DEVICE_CLASS_TEMPERATURE,
-                state_class=STATE_CLASS_MEASUREMENT,
-            ),
-        }
-    )
+from .. import (
+    sauna360_ns,
+    SAUNA360Component,
+    CONF_SAUNA360_ID,
 )
 
+SAUNA360Sensor = sauna360_ns.class_("SAUNA360Sensor", sensor.Sensor, cg.Component) 
+
+CONF_CURRENT_TEMPERATURE = "current_temperature"
+
+CONFIG_SCHEMA = cv.All(
+    cv.COMPONENT_SCHEMA.extend(
+        {
+          cv.GenerateID(): cv.declare_id(SAUNA360Sensor),
+          cv.GenerateID(CONF_SAUNA360_ID): cv.use_id(SAUNA360Component),
+          cv.Optional(CONF_CURRENT_TEMPERATURE): sensor.sensor_schema(
+            unit_of_measurement=UNIT_CELSIUS,
+            accuracy_decimals=0,
+            device_class=DEVICE_CLASS_TEMPERATURE,
+            state_class=STATE_CLASS_MEASUREMENT,
+            ),
+        }
+    ),
+)
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
-
-    if temperature_config := config.get(CONF_TEMPERATURE):
-        sens = await sensor.new_sensor(temperature_config)
-        cg.add(var.set_temperature_sensor(sens))
-        
+    if CONF_CURRENT_TEMPERATURE in config:
+      sens = await sensor.new_sensor(config[CONF_CURRENT_TEMPERATURE])
+      cg.add(var.set_temperature_sensor(sens))
+    sauna360 = await cg.get_variable(config[CONF_SAUNA360_ID])
+    cg.add(sauna360.register_listener(var))

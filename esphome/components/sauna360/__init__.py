@@ -1,26 +1,33 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import uart
-from esphome.const import CONF_ID, CONF_TEMPERATURE
+from esphome.const import CONF_ID
 
 DEPENDENCIES = ["uart"]
 
-
-AUTO_LOAD = ["sensor"]
 MULTI_CONF = True
 
-CONF_ACTUAL_TEMPERATURE_STATE = "actual_temp"
-CONF_SAUNA360 = "sauna360"
+sauna360_ns = cg.esphome_ns.namespace("sauna360")
+SAUNA360Component = sauna360_ns.class_("SAUNA360Component", cg.Component, uart.UARTDevice)
 
-sauna360_uart_component_ns = cg.esphome_ns.namespace("sauna360_uart_component")
-Sauna360UARTComponent = sauna360_uart_component_ns.class_(
-    "Sauna360UARTComponent", cg.Component, uart.UARTDevice
+CONF_SAUNA360_ID = "sauna360_id"
+
+CONFIG_SCHEMA = cv.All(
+    cv.Schema(
+        {
+            cv.GenerateID(): cv.declare_id(SAUNA360Component),
+        }
+    )
+    .extend(uart.UART_DEVICE_SCHEMA)
+    .extend(cv.COMPONENT_SCHEMA)
 )
 
-CONFIG_SCHEMA = (
-    cv.Schema({cv.GenerateID(): cv.declare_id(Sauna360UARTComponent)})
-    .extend(cv.COMPONENT_SCHEMA)
-    .extend(uart.UART_DEVICE_SCHEMA)
+FINAL_VALIDATE_SCHEMA = uart.final_validate_device_schema(
+    "sauna360_uart",
+    require_tx=True,
+    require_rx=True,
+    parity="EVEN",
+    stop_bits=1,
 )
 
 

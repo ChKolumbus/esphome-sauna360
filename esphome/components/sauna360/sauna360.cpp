@@ -3,15 +3,15 @@
 #include "sauna360.h"
 
 namespace esphome {
-namespace sauna360_uart_component {
+namespace sauna360 {
 
 static const char *TAG = "sauna360";
 
-void Sauna360UARTComponent::setup() {
+void SAUNA360Component::setup() {
 
 }
 
-void Sauna360UARTComponent::loop() {
+void SAUNA360Component::loop() {
   while (this->available()) {
     uint8_t c;
     this->read_byte(&c);
@@ -19,7 +19,7 @@ void Sauna360UARTComponent::loop() {
   }
 }
 
-void Sauna360UARTComponent::handle_char_(uint8_t c) {
+void SAUNA360Component::handle_char_(uint8_t c) {
   if (c == 0x9C) {
     std::vector<uint8_t> frame(this->rx_message_.begin(), this->rx_message_.end());
     this->rx_message_.clear();
@@ -29,7 +29,7 @@ void Sauna360UARTComponent::handle_char_(uint8_t c) {
   this->rx_message_.push_back(c);
 }
 
-void Sauna360UARTComponent::handle_frame_(std::vector<uint8_t> frame) {
+void SAUNA360Component::handle_frame_(std::vector<uint8_t> frame) {
   // Decode the frame
   std::vector<uint8_t> packet;
   bool isEscaped = false;
@@ -73,7 +73,7 @@ void Sauna360UARTComponent::handle_frame_(std::vector<uint8_t> frame) {
    frame.clear();
 }
 
-void Sauna360UARTComponent::handle_packet_(std::vector<uint8_t> packet) {
+void SAUNA360Component::handle_packet_(std::vector<uint8_t> packet) {
   // Decode the packet, but skip keepalive handshakes
   size_t len = packet.size();
   if (len <= 2){
@@ -108,7 +108,7 @@ void Sauna360UARTComponent::handle_packet_(std::vector<uint8_t> packet) {
     // Found temperature data point. Split into set point and actual value
     int actualTemp = (data & 0x00007FF) / 9.0;
     ESP_LOGCONFIG(TAG, "Actual temp: %d" ,actualTemp);
-    this->temperature_sensor_->publish_state(actualTemp);
+    for (auto &listener : listeners_) {listener->on_temperature(actualTemp);}
     int setPointTemp = ((data >> 11) & 0x00007FF) / 9.0;
     ESP_LOGCONFIG(TAG, "Set temp: %d" ,setPointTemp);
     //update_setPointTemp(setPointTemp);
@@ -143,11 +143,11 @@ void Sauna360UARTComponent::handle_packet_(std::vector<uint8_t> packet) {
   packet.clear();
 }
 
-void Sauna360UARTComponent::dump_config(){
+void SAUNA360Component::dump_config(){
     ESP_LOGCONFIG(TAG, "UART component");
 
 }
 
 
-}  // namespace sauna360_uart_component
+}  // namespace sauna360
 }  // namespace esphome

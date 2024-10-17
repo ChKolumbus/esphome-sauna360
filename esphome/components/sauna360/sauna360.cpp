@@ -8,14 +8,47 @@ namespace sauna360 {
 static const char *TAG = "sauna360";
 
 void SAUNA360Component::setup() {
-
+#ifdef USE_TIME
+  if (this->time_id_ != nullptr) {
+    this->time_id_->add_on_time_sync_callback([this] { this->send_time(); });
+  }
+#endif
 }
 
 void SAUNA360Component::loop() {
+  const uint32_t now = millis();
+
+  // Discard stale data
+//if (!this->rx_message_.empty() && (now - this->last_rx_ > 50)) {
+  if (!this->rx_message_.empty() && (now - this->last_rx_ > 50)) {
+    ESP_LOGD(TAG, "Discarding %d bytes of unparsed data", this->rx_message_.size());
+    this->rx_message_.clear();
+  }
+
   while (this->available()) {
+    this->last_rx_ = now;
     uint8_t c;
     this->read_byte(&c);
     this->handle_char_(c);
+  }
+    // Send packets during bus silence
+//if (this->rx_message_.empty() && (now - this->last_rx_ > 50) && (now - this->last_rx_ < 100) && (now - this->last_tx_ > 200)) {
+  if (this->rx_message_.empty() && (now - this->last_rx_ > 50) && (now - this->last_rx_ < 100) && (now - this->last_tx_ > 200)) {
+#ifdef USE_TIME
+    // Only build time packet when bus is silent and queue is empty to make sure we can send it right away
+    if (this->send_time_requested_ && this->tx_queue_.empty() && this->do_send_time_())
+      this->send_time_requested_ = false;
+#endif
+    // Send the next packet in the queue
+    if (!this->tx_queue_.empty()) {
+      auto packet = std::move(this->tx_queue_.front());
+      this->tx_queue_.pop();
+
+      this->write_array(packet);
+      this->flush();
+
+      this->last_tx_ = now;
+    }
   }
 }
 
@@ -84,7 +117,8 @@ void SAUNA360Component::handle_packet_(std::vector<uint8_t> packet) {
   int packetType = packet[1];
   //ESP_LOGCONFIG(TAG, "Adress: hex %.2X dec %d" ,address ,address);
   //ESP_LOGCONFIG(TAG, "Type: hex %.2X dec %d" ,packetType ,packetType);
-  //ESP_LOGCONFIG(TAG, "Packet: %08x" ,packet);
+  ESP_LOGCONFIG(TAG, "Packet: %s" ,format_hex_pretty(packet).c_str());
+
 
   uint16_t code = ((uint16_t) packet[2]) << 8; // add MSB 
   code |= ((uint16_t) packet[3]); // add LSB
@@ -94,7 +128,7 @@ void SAUNA360Component::handle_packet_(std::vector<uint8_t> packet) {
   data |= ((uint32_t) packet[5]) << 16; // add next byte
   data |= ((uint32_t) packet[6]) << 8; // add next byte
   data |= ((uint32_t) packet[7]); // add LSB"
-  //ESP_LOGCONFIG(TAG, "Data: %08x" ,data);
+  ESP_LOGCONFIG(TAG, "Data: %08x" ,data);
   
 /*
    // Only take codes from the heater to control
@@ -142,6 +176,53 @@ void SAUNA360Component::handle_packet_(std::vector<uint8_t> packet) {
 
   packet.clear();
 }
+
+ void SAUNA360Component::send() {
+
+/*
+  // packet for send queue. All fields are big-endian except for the little-endian checksum.
+  std::vector<uint8_t> packet;
+  packet.reserve(6 + 3 * data_len);
+
+  packet.push_back(this->address_ >> 8);
+  packet.push_back(this->address_ >> 0);
+  packet.push_back(device_address >> 8);
+  packet.push_back(device_address >> 0);
+
+  for (int i = 0; i < data_len; i++) {
+    packet.push_back(data[i].id);
+    packet.push_back(data[i].value >> 8);
+    packet.push_back(data[i].value >> 0);
+  }
+
+  auto crc = crc16(packet.data(), packet.size());
+  packet.push_back(crc >> 0);
+  packet.push_back(crc >> 8);
+
+  this->tx_queue_.push(packet);
+  return true;
+  */
+}
+
+void SAUNA360Component::apply_heater_on_action() {
+  //#98 40 07 70 00 00 04 00 40 74 91 6E 9C
+  //data: [0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x04, 0x00, 0x40, 0x74, 0x91, 0x6E, 0x9C]
+  //  40.07.70.00.00.00.00.40 
+  std::vector<uint8_t> packet({ 0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0x40, 0x74, 0x91, 0x6E, 0x9C });
+  this->tx_queue_.push(packet);
+  ESP_LOGCONFIG(TAG, "SETTING HEATER ON");
+    return;
+  }
+
+void SAUNA360Component::apply_heater_off_action() {
+  //#98 40 07 70 00 00 04 00 80 6C D6 9C
+  //data: [0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x04, 0x00, 0x80, 0x6C, 0xD6, 0x9C]
+  // 40.07.70.00.00.00.00.80
+  std::vector<uint8_t> packet({ 0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x04, 0x00, 0x80, 0x6C, 0xD6, 0x9C });
+  this->tx_queue_.push(packet);
+  ESP_LOGCONFIG(TAG, "SETTING HEATER OFF");
+    return;
+  }
 
 void SAUNA360Component::dump_config(){
     ESP_LOGCONFIG(TAG, "UART component");

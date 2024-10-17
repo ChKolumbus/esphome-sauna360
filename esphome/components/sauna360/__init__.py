@@ -5,7 +5,7 @@ from esphome.const import CONF_ID
 
 DEPENDENCIES = ["uart"]
 
-MULTI_CONF = True
+#MULTI_CONF = True
 
 sauna360_ns = cg.esphome_ns.namespace("sauna360")
 SAUNA360Component = sauna360_ns.class_("SAUNA360Component", cg.Component, uart.UARTDevice)

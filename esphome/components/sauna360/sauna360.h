@@ -2,6 +2,21 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/uart/uart.h"
+#include "esphome/core/automation.h"
+#include "esphome/core/helpers.h"
+
+#ifdef USE_TIME
+#include "esphome/components/time/real_time_clock.h"
+#include "esphome/core/time.h"
+#endif
+
+#ifdef USE_BUTTON
+#include "esphome/components/button/button.h"
+#endif
+
+#include <queue>
+#include <map>
+#include <functional>
 
 namespace esphome {
 namespace sauna360 {
@@ -17,13 +32,36 @@ class SAUNA360Component : public uart::UARTDevice, public Component {
     void loop() override;
     void dump_config() override;
     void register_listener(SAUNA360Listener *listener) { this->listeners_.push_back(listener); }
+   #ifdef USE_BUTTON
+    void set_heater_on_button(button::Button *button) { this->set_heater_on_button_ = button; };
+    button::Button *set_heater_on_button_{nullptr};
+    void set_heater_off_button(button::Button *button) { this->set_heater_off_button_ = button; };
+    button::Button *set_heater_off_button_{nullptr};
+   #endif
+    void send();
+    void apply_heater_on_action();
+    void apply_heater_off_action();
+   #ifdef USE_TIME
+    void set_time_id(time::RealTimeClock *time_id) { this->time_id_ = time_id; }
+    void set_time_device_address(uint16_t address) { this->time_device_address_ = address; }
+    void send_time() { this->send_time_requested_ = true; }
+   #endif
 
   protected:
     void handle_char_(uint8_t c);
     void handle_frame_(std::vector<uint8_t> frame);
     void handle_packet_(std::vector<uint8_t> packet);
     std::vector<uint8_t> rx_message_;
+    std::queue<std::vector<uint8_t>> tx_queue_;
+    uint32_t last_rx_;
+    uint32_t last_tx_;
     std::vector<SAUNA360Listener *> listeners_{};
+   #ifdef USE_TIME
+    time::RealTimeClock *time_id_{nullptr};
+    uint16_t time_device_address_;
+    bool send_time_requested_;
+    bool do_send_time_();
+   #endif
 };
 
 

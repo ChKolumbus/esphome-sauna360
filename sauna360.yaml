@@ -59,11 +59,20 @@ sensor:
 - platform: sauna360
   current_temperature:
     name: "Current Temperature"
+- platform: sauna360
+  setting_temperature:
+    name: "Setting Temperature"
+- platform: sauna360
+  remaining_time:
+    name: "Remaining time"
 
 button:
 - platform: sauna360
   heater_on:
-    name: "Heater On"
+    name: "On"
 - platform: sauna360
   heater_off:
-    name: "Heater Off"
+    name: "Off"
+- platform: sauna360
+  heater_standby:
+    name: "Standby"

@@ -22,5 +22,13 @@ class SAUNA360HeaterOffButton : public button::Button, public Parented<SAUNA360C
   void press_action() override;
 };
 
+class SAUNA360HeaterStandbyButton : public button::Button, public Parented<SAUNA360Component> {
+ public:
+  SAUNA360HeaterStandbyButton() = default;
+
+ protected:
+  void press_action() override;
+};
+
 }  // namespace sauna360
 }  // namespace esphome

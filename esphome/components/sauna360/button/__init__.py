@@ -1,9 +1,7 @@
 import esphome.codegen as cg
 from esphome.components import button
 import esphome.config_validation as cv
-from esphome.const import (
-    ICON_HEATING_COIL,
-)
+# from esphome.const import
 
 from .. import (
     sauna360_ns,
@@ -13,20 +11,25 @@ from .. import (
 
 SAUNA360HeaterOnButton = sauna360_ns.class_("SAUNA360HeaterOnButton", button.Button)
 SAUNA360HeaterOffButton = sauna360_ns.class_("SAUNA360HeaterOffButton", button.Button)
+SAUNA360HeaterStandbyButton = sauna360_ns.class_("SAUNA360HeaterStandbyButton", button.Button)
 
 CONF_SAUNA_ON = "heater_on"
 CONF_SAUNA_OFF = "heater_off"
-
+CONF_SAUNA_STANDBY = "heater_standby"
 
 CONFIG_SCHEMA = {
     cv.GenerateID(CONF_SAUNA360_ID): cv.use_id(SAUNA360Component),
     cv.Optional(CONF_SAUNA_ON): button.button_schema(
         SAUNA360HeaterOnButton,
-        icon=ICON_HEATING_COIL,
+        icon="mdi:power-on",
     ),
     cv.Optional(CONF_SAUNA_OFF): button.button_schema(
         SAUNA360HeaterOffButton,
-        icon=ICON_HEATING_COIL,
+        icon="mdi:power-off",
+    ),
+    cv.Optional(CONF_SAUNA_STANDBY): button.button_schema(
+        SAUNA360HeaterStandbyButton,
+        icon="mdi:power",
     ),
 }
 
@@ -41,3 +44,7 @@ async def to_code(config):
         b = await button.new_button(heater_off)
         await cg.register_parented(b, config[CONF_SAUNA360_ID])
         cg.add(sauna360_component.set_heater_off_button(b))
+    if heater_standby := config.get(CONF_SAUNA_STANDBY):
+        b = await button.new_button(heater_standby)
+        await cg.register_parented(b, config[CONF_SAUNA360_ID])
+        cg.add(sauna360_component.set_heater_standby_button(b))

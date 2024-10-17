@@ -96,9 +96,12 @@ void SAUNA360Component::handle_frame_(std::vector<uint8_t> frame) {
   // Check the CRC
   // uint16_t esphome::crc16be (const uint8_t * data, uint16_t	len, uint16_t	crc, uint16_t poly,	bool refin,	bool refout) 	
   // uint8_t *crc_packet = packet.data();
+   //size_t len = packet.size(); // for debug
+   //if (len >= 4){ESP_LOGCONFIG(TAG, "Packet CRC: %s" ,format_hex_pretty(packet).c_str());} // for debug
+   
    if (crc16be(packet.data(), 16, 0xffff, 0x90d9, false, false)){
-    packet.pop_back();
-    this->handle_packet_(packet);
+     packet.pop_back();
+     this->handle_packet_(packet);
    }
    else {
     ESP_LOGCONFIG(TAG, "CRC ERROR");
@@ -113,11 +116,10 @@ void SAUNA360Component::handle_packet_(std::vector<uint8_t> packet) {
     packet.clear();
     return;
   }
-  int address = packet[0];
-  int packetType = packet[1];
+  uint8_t address = packet[0];
+  uint8_t packetType = packet[1];
   //ESP_LOGCONFIG(TAG, "Adress: hex %.2X dec %d" ,address ,address);
   //ESP_LOGCONFIG(TAG, "Type: hex %.2X dec %d" ,packetType ,packetType);
-  ESP_LOGCONFIG(TAG, "Packet: %s" ,format_hex_pretty(packet).c_str());
 
 
   uint16_t code = ((uint16_t) packet[2]) << 8; // add MSB 
@@ -128,35 +130,36 @@ void SAUNA360Component::handle_packet_(std::vector<uint8_t> packet) {
   data |= ((uint32_t) packet[5]) << 16; // add next byte
   data |= ((uint32_t) packet[6]) << 8; // add next byte
   data |= ((uint32_t) packet[7]); // add LSB"
-  ESP_LOGCONFIG(TAG, "Data: %08x" ,data);
+  //ESP_LOGCONFIG(TAG, "Data: %08x" ,data);
   
-/*
-   // Only take codes from the heater to control
-  if ((packetType != 0x07) & (packetType != 0x09)){
+
+   // Only take codes from the heater to control // hide code 4200 clock?
+  if ((packetType == 0x07) || (packetType == 0x09) || (code == 0x4200)) {
     packet.clear();
     return;
   }
-*/
-
+  ESP_LOGCONFIG(TAG, "Packet: %s" ,format_hex_pretty(packet).c_str());
+  ESP_LOGCONFIG(TAG, "Code: %04x" ,code);
+  ESP_LOGCONFIG(TAG, "Data: %08x" ,data);
   if (code == 0x6000){
     // Found temperature data point. Split into set point and actual value
     int actualTemp = (data & 0x00007FF) / 9.0;
-    ESP_LOGCONFIG(TAG, "Actual temp: %d" ,actualTemp);
+    //ESP_LOGCONFIG(TAG, "Actual temp: %d" ,actualTemp);
     for (auto &listener : listeners_) {listener->on_temperature(actualTemp);}
     int setPointTemp = ((data >> 11) & 0x00007FF) / 9.0;
-    ESP_LOGCONFIG(TAG, "Set temp: %d" ,setPointTemp);
-    //update_setPointTemp(setPointTemp);
+    for (auto &listener : listeners_) {listener->on_temperature_setting(setPointTemp);}
+    //ESP_LOGCONFIG(TAG, "Set temp: %d" ,setPointTemp);
   }
 
   else if (code == 0x3400){
     // Found state code.
     ESP_LOGCONFIG(TAG, "State code: %08x" ,data);
 
-    uint32_t ready = (data & 0x00000001);
+    bool ready = (data & 0x00000001) != 0;
     ESP_LOGCONFIG(TAG, "Ready: %zu" ,ready);
-    uint32_t light = (data & 0x00000008);
+    uint32_t light = (data & 0x00000008) != 0;
     ESP_LOGCONFIG(TAG, "Light: %zu" ,ready);
-    uint32_t heater = (data & 0x00000010);
+    bool heater = (data & 0x00000010) != 0;
     ESP_LOGCONFIG(TAG, "Heater: %zu" ,ready);
   }
 
@@ -167,11 +170,14 @@ void SAUNA360Component::handle_packet_(std::vector<uint8_t> packet) {
 
   else if (code == 0x9401){
     //Found bathing time minute downcounter.
-    ESP_LOGCONFIG(TAG, "Remaining time: %dmin" ,data);
+    //ESP_LOGCONFIG(TAG, "Remaining time: %dmin" ,data);
+    for (auto &listener : listeners_) {listener->on_remaining_time(data);}
   }
 
   else {
-    //ESP_LOGCONFIG(TAG, "Packet not defined: %02x %02x %04x %08x" ,address ,packetType, code, data);
+    //ESP_LOGCONFIG(TAG, "Packet: %s" ,format_hex_pretty(packet).c_str());
+    //ESP_LOGCONFIG(TAG, "Code: %04x" ,code);
+    //ESP_LOGCONFIG(TAG, "Data: %08x" ,data);
   }
 
   packet.clear();
@@ -224,6 +230,16 @@ void SAUNA360Component::apply_heater_off_action() {
     return;
   }
 
+void SAUNA360Component::apply_heater_standby_action() {
+  //40.07.70.00.00.00.00.C0.0A
+  //#98 40 07 70 00 00 00 00 C0 0A 9C
+  //data: [0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x0A, 0x9C]
+  // 40.07.70.00.00.00.00.80
+  std::vector<uint8_t> packet({ 0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x0A, 0x9C });
+  this->tx_queue_.push(packet);
+  ESP_LOGCONFIG(TAG, "SETTING HEATER STANDBY");
+    return;
+  }
 void SAUNA360Component::dump_config(){
     ESP_LOGCONFIG(TAG, "UART component");
 

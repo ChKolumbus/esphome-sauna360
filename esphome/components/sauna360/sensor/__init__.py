@@ -40,8 +40,7 @@ CONFIG_SCHEMA = cv.All(
             state_class=STATE_CLASS_MEASUREMENT,
             ),
           cv.Optional(CONF_REMAINING_TIME): sensor.sensor_schema(
-            unit_of_measurement=UNIT_MINUTE,
-            accuracy_decimals=0,
+            unit_of_measurement=UNIT_MINUTE,22
             device_class=DEVICE_CLASS_DURATION,
             state_class=STATE_CLASS_MEASUREMENT,
             ),

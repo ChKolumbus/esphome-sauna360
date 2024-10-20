@@ -35,17 +35,20 @@ class SAUNA360Component : public uart::UARTDevice, public Component {
     void dump_config() override;
     void register_listener(SAUNA360Listener *listener) { this->listeners_.push_back(listener); }
    #ifdef USE_BUTTON
-    void set_heater_on_button(button::Button *button) { this->set_heater_on_button_ = button; };
-    button::Button *set_heater_on_button_{nullptr};
-    void set_heater_off_button(button::Button *button) { this->set_heater_off_button_ = button; };
-    button::Button *set_heater_off_button_{nullptr};
-    void set_heater_standby_button(button::Button *button) { this->set_heater_standby_button_ = button; };
-    button::Button *set_heater_standby_button_{nullptr};
+    void set_elite_heater_on_button(button::Button *button) { this->set_elite_heater_on_button_ = button; };
+    button::Button *set_elite_heater_on_button_{nullptr};
+    void set_elite_heater_off_button(button::Button *button) { this->set_elite_heater_off_button_ = button; };
+    button::Button *set_elite_heater_off_button_{nullptr};
+    void set_elite_heater_standby_button(button::Button *button) { this->set_elite_heater_standby_button_ = button; };
+    button::Button *set_elite_heater_standby_button_{nullptr};
+    void set_pure_power_toggle_button(button::Button *button) { this->set_pure_power_toggle_button_ = button; };
+    button::Button *set_pure_power_toggle_button_{nullptr};
    #endif
     void send();
-    void apply_heater_on_action();
-    void apply_heater_off_action();
-    void apply_heater_standby_action();
+    void apply_elite_heater_on_action();
+    void apply_elite_heater_off_action();
+    void apply_elite_heater_standby_action();
+    void apply_pure_power_toggle_action();
    #ifdef USE_TIME
     void set_time_id(time::RealTimeClock *time_id) { this->time_id_ = time_id; }
     void set_time_device_address(uint16_t address) { this->time_device_address_ = address; }

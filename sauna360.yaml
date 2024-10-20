@@ -68,11 +68,14 @@ sensor:
 
 button:
 - platform: sauna360
-  heater_on:
+  elite_heater_on: #use only if elite panel
     name: "On"
 - platform: sauna360
-  heater_off:
+  elite_heater_off: #use only if elite panel
     name: "Off"
 - platform: sauna360
-  heater_standby:
+  elite_heater_standby: #use only if elite panel
     name: "Standby"
+- platform: sauna360
+  pure_power_toggle: #use only if pure panel
+    name: "Power Toggle"

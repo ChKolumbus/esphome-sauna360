@@ -37,7 +37,7 @@ void SAUNA360Component::loop() {
 
       auto packet = std::move(this->tx_queue_.front());
       this->tx_queue_.pop();
-
+      ESP_LOGCONFIG(TAG, "TX QUEUE: %s" ,format_hex_pretty(packet).c_str()); // for debug2
       this->write_array(packet);
       this->flush();
 
@@ -163,7 +163,7 @@ void SAUNA360Component::handle_packet_(std::vector<uint8_t> packet) {
  // not in use yet
 }
 
-void SAUNA360Component::apply_heater_on_action() {
+void SAUNA360Component::apply_elite_heater_on_action() {
   //not sure yet, send data value changed in somepoint? just to keep values before if changes again?
   //#98 40 07 70 00 00 04 00 40 74 91 6E 9C
   // 98.40.07.70.00.00.00.00.40.95.59.9C
@@ -175,7 +175,7 @@ void SAUNA360Component::apply_heater_on_action() {
     return;
   }
 
-void SAUNA360Component::apply_heater_off_action() {
+void SAUNA360Component::apply_elite_heater_off_action() {
   // 98 40 07 70 00 00 04 00 80 6C D6 9C
   // 98.40.07.70.00.00.00.00.80.8D.1E.9C
   this->flush();
@@ -186,7 +186,7 @@ void SAUNA360Component::apply_heater_off_action() {
     return;
   }
 
-void SAUNA360Component::apply_heater_standby_action() {
+void SAUNA360Component::apply_elite_heater_standby_action() {
   //#98 40 07 70 00 00 00 00 C0 0A 9C
   // 98.40.07.70.00.00.00.00.C0.0A.94.9C
   this->flush();
@@ -194,6 +194,15 @@ void SAUNA360Component::apply_heater_standby_action() {
   std::vector<uint8_t> send_packet({ 0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x0A, 0x94, 0x9C });
   this->tx_queue_.push(send_packet);
   ESP_LOGCONFIG(TAG, "SETTING HEATER STANDBY");
+    return;
+  }
+
+void SAUNA360Component::apply_pure_power_toggle_action() {
+  // 98.40.07.70.00.00.00.00.01.82.0A.9C
+  this->flush();
+  std::vector<uint8_t> send_packet({ 0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0x01, 0x82, 0x0A, 0x9C });
+  this->tx_queue_.push(send_packet);
+  ESP_LOGCONFIG(TAG, "PURE POWER TOGGLE");
     return;
   }
 

@@ -26,6 +26,8 @@ class SAUNA360Listener {
    virtual void on_temperature(uint16_t temperature){};
    virtual void on_temperature_setting(uint16_t temperature_setting){};
    virtual void on_remaining_time(uint16_t remaining_time){};
+   virtual void on_humidity(uint16_t humidity){};
+   virtual void on_humidity_percentage(uint16_t humidity_percentage){};
 };
 
 class SAUNA360Component : public uart::UARTDevice, public Component {

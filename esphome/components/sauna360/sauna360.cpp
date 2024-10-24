@@ -152,6 +152,27 @@ void SAUNA360Component::handle_packet_(std::vector<uint8_t> packet) {
     //  probably clock
   }
 
+  else if (code == 0x6001) {
+    // Extract the second byte and the lower nibble of the third byte
+
+    uint8_t second_byte = (data & 0xFF00) >> 8;
+    uint8_t third_byte_lower_nibble = (data & 0x00F0) >> 4;
+
+    // Calculate the humidity setting based on the pattern and adjust by subtracting 5
+    uint16_t humidity_setting = (second_byte - 0x30) * 2 + (third_byte_lower_nibble / 8) - 5;
+
+    ESP_LOGCONFIG(TAG, "Humidity setting: %d", humidity_setting);
+    for (auto &listener : listeners_) {listener->on_humidity(humidity_setting);}
+  }
+
+  else if (code == 0x7180) {
+    // Extract humidity percentage from the data
+    uint16_t humidity_percentage = data & 0xFFFF; // Assuming the humidity is in the least significant byte
+
+    ESP_LOGCONFIG(TAG, "Humidity percentage: %d%%", humidity_percentage);
+    for (auto &listener : listeners_) {listener->on_humidity_percentage(humidity_percentage);}
+  }
+
   else {
     ESP_LOGCONFIG(TAG, "Packet: %s" ,format_hex_pretty(packet).c_str());
     ESP_LOGCONFIG(TAG, "Code: %04x" ,code);
@@ -199,20 +220,30 @@ void SAUNA360Component::apply_elite_heater_standby_action() {
     return;
   }
 
+
 void SAUNA360Component::apply_pure_power_toggle_action() {
-  // 98.40.07.70.00.00.00.00.01.82.0A.9C
   this->flush();
-  std::vector<uint8_t> send_packet({ 0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0x01, 0x82, 0x0A, 0x9C });
-  // Check if the queue size is less than the maximum allowed size
-  ESP_LOGCONFIG(TAG, "TX QUEUE SIZE: %d", this->tx_queue_.size());
-  
-  if (this->tx_queue_.size() < MAX_QUEUE_SIZE) {
-   this->tx_queue_.push(send_packet);
-   ESP_LOGCONFIG(TAG, "FRAME: %s", format_hex_pretty(send_packet).c_str());
+
+  // Define the sequence of packets to send
+  std::vector<std::vector<uint8_t>> packets = {
+    {0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0x01, 0x82, 0x0A, 0x9C},
+    // Add additional packets here if necessary
+  };
+
+  // Log current queue size
+  ESP_LOGCONFIG(TAG, "TX QUEUE SIZE BEFORE PUSH: %d", this->tx_queue_.size());
+
+  for (const auto& packet : packets) {
+    if (this->tx_queue_.size() < MAX_QUEUE_SIZE) {
+      this->tx_queue_.push(packet);
+      ESP_LOGCONFIG(TAG, "Queued FRAME: %s", format_hex_pretty(packet).c_str());
+    } else {
+      ESP_LOGW(TAG, "TX Queue full. Cannot queue FRAME: %s", format_hex_pretty(packet).c_str());
+    }
   }
+
   ESP_LOGCONFIG(TAG, "PURE POWER TOGGLED");
-    return;
-  }
+}
 
 void SAUNA360Component::dump_config(){
     ESP_LOGCONFIG(TAG, "UART component");

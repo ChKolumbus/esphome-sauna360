@@ -203,6 +203,9 @@ void SAUNA360Component::apply_pure_power_toggle_action() {
   // 98.40.07.70.00.00.00.00.01.82.0A.9C
   this->flush();
   std::vector<uint8_t> send_packet({ 0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0x01, 0x82, 0x0A, 0x9C });
+  // Check if the queue size is less than the maximum allowed size
+  ESP_LOGCONFIG(TAG, "TX QUEUE SIZE: %d", this->tx_queue_.size());
+  
   if (this->tx_queue_.size() < MAX_QUEUE_SIZE) {
    this->tx_queue_.push(send_packet);
    ESP_LOGCONFIG(TAG, "FRAME: %s", format_hex_pretty(send_packet).c_str());

@@ -65,7 +65,13 @@ sensor:
 - platform: sauna360
   remaining_time:
     name: "Remaining time"
-
+- platform: sauna360
+  humidity_setting:
+    name: "Humidity Setting"
+- platform: sauna360
+  humidity_percentage:
+    name: "Current Humidity"
+    
 button:
 - platform: sauna360
   elite_heater_on: #use only if elite panel

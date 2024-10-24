@@ -2,6 +2,8 @@
 #include "esphome/core/helpers.h"
 #include "sauna360.h"
 
+#define MAX_QUEUE_SIZE 10
+
 namespace esphome {
 namespace sauna360 {
 
@@ -26,7 +28,7 @@ void SAUNA360Component::loop() {
   }
 
   // Send packets during bus silence, best value sound far is 40
-  if (this->rx_message_.empty() && (now - this->last_rx_ > 40) && (now - this->last_tx_ > 200)) {
+  if (this->rx_message_.empty() && (now - this->last_rx_ > 100) && (now - this->last_tx_ > 500)) {
 #ifdef USE_TIME
     // Only build time packet when bus is silent and queue is empty to make sure we can send it right away
     if (this->send_time_requested_ && this->tx_queue_.empty() && this->do_send_time_())
@@ -201,8 +203,11 @@ void SAUNA360Component::apply_pure_power_toggle_action() {
   // 98.40.07.70.00.00.00.00.01.82.0A.9C
   this->flush();
   std::vector<uint8_t> send_packet({ 0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0x01, 0x82, 0x0A, 0x9C });
-  this->tx_queue_.push(send_packet);
-  ESP_LOGCONFIG(TAG, "PURE POWER TOGGLE");
+  if (this->tx_queue_.size() < MAX_QUEUE_SIZE) {
+   this->tx_queue_.push(send_packet);
+   ESP_LOGCONFIG(TAG, "FRAME: %s", format_hex_pretty(send_packet).c_str());
+  }
+  ESP_LOGCONFIG(TAG, "PURE POWER TOGGLED");
     return;
   }
 

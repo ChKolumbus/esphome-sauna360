@@ -245,6 +245,30 @@ void SAUNA360Component::apply_pure_power_toggle_action() {
   ESP_LOGCONFIG(TAG, "PURE POWER TOGGLED");
 }
 
+void SAUNA360Component::apply_pure_light_toggle_action() {
+  this->flush();
+
+  // Define the sequence of packets to send
+  std::vector<std::vector<uint8_t>> packets = {
+    {0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0x01, 0x82, 0x0A, 0x9C},
+    // Add additional packets here if necessary
+  };
+
+  // Log current queue size
+  ESP_LOGCONFIG(TAG, "TX QUEUE SIZE BEFORE PUSH: %d", this->tx_queue_.size());
+
+  for (const auto& packet : packets) {
+    if (this->tx_queue_.size() < MAX_QUEUE_SIZE) {
+      this->tx_queue_.push(packet);
+      ESP_LOGCONFIG(TAG, "Queued FRAME: %s", format_hex_pretty(packet).c_str());
+    } else {
+      ESP_LOGW(TAG, "TX Queue full. Cannot queue FRAME: %s", format_hex_pretty(packet).c_str());
+    }
+  }
+
+  ESP_LOGCONFIG(TAG, "PURE LIGHT TOGGLED");
+}
+
 void SAUNA360Component::dump_config(){
     ESP_LOGCONFIG(TAG, "UART component");
 

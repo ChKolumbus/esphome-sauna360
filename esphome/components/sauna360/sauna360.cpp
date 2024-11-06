@@ -2,7 +2,6 @@
 #include "esphome/core/helpers.h"
 #include "sauna360.h"
 
-#define MAX_QUEUE_SIZE 10
 
 namespace esphome {
 namespace sauna360 {
@@ -10,15 +9,13 @@ namespace sauna360 {
 static const char *TAG = "sauna360";
 
 void SAUNA360Component::setup() {
-#ifdef USE_TIME
-  if (this->time_id_ != nullptr) {
-    this->time_id_->add_on_time_sync_callback([this] { this->send_time(); });
+  if (this->flow_control_pin_ != nullptr) {
+    this->flow_control_pin_->setup();
   }
-#endif
 }
 
 void SAUNA360Component::loop() {
-  const uint32_t now = millis();
+  const uint32_t now = micros();
 
   while (this->available()) {
     this->last_rx_ = now;
@@ -26,39 +23,46 @@ void SAUNA360Component::loop() {
     this->read_byte(&c);
     this->handle_char_(c);
   }
-
-  // Send packets during bus silence, best value sound far is 40
-  if (this->rx_message_.empty() && (now - this->last_rx_ > 100) && (now - this->last_tx_ > 500)) {
-#ifdef USE_TIME
-    // Only build time packet when bus is silent and queue is empty to make sure we can send it right away
-    if (this->send_time_requested_ && this->tx_queue_.empty() && this->do_send_time_())
-      this->send_time_requested_ = false;
-#endif
-    // Send the next packet in the queue
-    if (!this->tx_queue_.empty()) {
-
-      auto packet = std::move(this->tx_queue_.front());
-      this->tx_queue_.pop();
-      ESP_LOGCONFIG(TAG, "TX QUEUE: %s" ,format_hex_pretty(packet).c_str()); // for debug2
-      this->write_array(packet);
-      this->flush();
-
-      this->last_tx_ = now;
-    }
-  }
+  send_data_();
 }
 
 void SAUNA360Component::handle_char_(uint8_t c) {
+  const uint32_t now_micros = micros(); //for debug
   if (c == 0x9C) {
     std::vector<uint8_t> frame(this->rx_message_.begin(), this->rx_message_.end());
-    size_t len = frame.size(); // for debug
-    if (len >= 6){ESP_LOGCONFIG(TAG, "FRAME: %s" ,format_hex_pretty(frame).c_str());} // for debug
+    //after keepalive from heater 98.40.06.6D.3A.9C better time to send data?
+    //if (frame[4] == 0x3A) this->send_data_();
+    // for debug
+    if ((frame[4] != 0xE3) && (frame[4] != 0x3A )){ESP_LOGCONFIG(TAG, "Previous frame %zuus Received in %zuus %s" , micros()-this->last_frame_, micros()-now_micros,format_hex_pretty(frame).c_str());}
+    this->last_frame_ = now_micros; //for debug
     this->rx_message_.clear();
     this->handle_frame_(frame);
     return;
   }
   this->rx_message_.push_back(c);
 }
+
+ void SAUNA360Component::send_data_() {
+
+    // Send the next packet in the queue
+    if (!this->tx_queue_.empty()) {
+      auto packet = std::move(this->tx_queue_.front());
+      this->tx_queue_.pop();
+      ESP_LOGCONFIG(TAG, "%zu TX QUEUE: %s" , millis(), format_hex_pretty(packet).c_str()); // for debug
+      // signal flow control write mode enabled
+      if (this->flow_control_pin_ != nullptr) {
+        this->flow_control_pin_->digital_write(true);   
+      }
+      
+      this->write_array(packet);
+      this->flush();
+
+      // signal flow control write mode disabled
+      if (this->flow_control_pin_ != nullptr) {
+        this->flow_control_pin_->digital_write(false);
+      }
+    }
+  }
 
 void SAUNA360Component::handle_frame_(std::vector<uint8_t> frame) {
   // Decode the frame
@@ -169,7 +173,6 @@ void SAUNA360Component::handle_packet_(std::vector<uint8_t> packet) {
     // Extract humidity percentage from the data
     uint16_t humidity_percentage = data & 0xFFFF; // Assuming the humidity is in the least significant byte
 
-    ESP_LOGCONFIG(TAG, "Humidity percentage: %d%%", humidity_percentage);
     for (auto &listener : listeners_) {listener->on_humidity_percentage(humidity_percentage);}
   }
 
@@ -180,10 +183,6 @@ void SAUNA360Component::handle_packet_(std::vector<uint8_t> packet) {
   }
 
   packet.clear();
-}
-
- void SAUNA360Component::send() {
- // not in use yet
 }
 
 void SAUNA360Component::apply_elite_heater_on_action() {
@@ -222,55 +221,23 @@ void SAUNA360Component::apply_elite_heater_standby_action() {
 
 
 void SAUNA360Component::apply_pure_power_toggle_action() {
-  this->flush();
-
-  // Define the sequence of packets to send
-  std::vector<std::vector<uint8_t>> packets = {
-    {0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0x01, 0x82, 0x0A, 0x9C},
-    // Add additional packets here if necessary
-  };
-
-  // Log current queue size
-  ESP_LOGCONFIG(TAG, "TX QUEUE SIZE BEFORE PUSH: %d", this->tx_queue_.size());
-
-  for (const auto& packet : packets) {
-    if (this->tx_queue_.size() < MAX_QUEUE_SIZE) {
-      this->tx_queue_.push(packet);
-      ESP_LOGCONFIG(TAG, "Queued FRAME: %s", format_hex_pretty(packet).c_str());
-    } else {
-      ESP_LOGW(TAG, "TX Queue full. Cannot queue FRAME: %s", format_hex_pretty(packet).c_str());
-    }
-  }
-
-  ESP_LOGCONFIG(TAG, "PURE POWER TOGGLED");
+  std::vector<uint8_t> send_packet({ 0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0x01, 0x82, 0x0A });
+  this->tx_queue_.push(send_packet);
+  ESP_LOGCONFIG(TAG, "PURE POWER TOGGLE");
+    return;
 }
 
 void SAUNA360Component::apply_pure_light_toggle_action() {
-  this->flush();
-
   // Define the sequence of packets to send
-  std::vector<std::vector<uint8_t>> packets = {
-    {0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0x01, 0x82, 0x0A, 0x9C},
-    // Add additional packets here if necessary
-  };
-
-  // Log current queue size
-  ESP_LOGCONFIG(TAG, "TX QUEUE SIZE BEFORE PUSH: %d", this->tx_queue_.size());
-
-  for (const auto& packet : packets) {
-    if (this->tx_queue_.size() < MAX_QUEUE_SIZE) {
-      this->tx_queue_.push(packet);
-      ESP_LOGCONFIG(TAG, "Queued FRAME: %s", format_hex_pretty(packet).c_str());
-    } else {
-      ESP_LOGW(TAG, "TX Queue full. Cannot queue FRAME: %s", format_hex_pretty(packet).c_str());
-    }
-  }
-
-  ESP_LOGCONFIG(TAG, "PURE LIGHT TOGGLED");
+  std::vector<uint8_t> send_packet({0x98, 0x40, 0x07, 0x70, 0x00, 0x00, 0x00, 0x00, 0x02, 0xA3, 0xB8 });
+  this->tx_queue_.push(send_packet);
+  ESP_LOGCONFIG(TAG, "PURE Light TOGGLE");
+    return;
 }
 
 void SAUNA360Component::dump_config(){
     ESP_LOGCONFIG(TAG, "UART component");
+    LOG_PIN("Flow Control Pin:", this->flow_control_pin_);
 
 }
 
